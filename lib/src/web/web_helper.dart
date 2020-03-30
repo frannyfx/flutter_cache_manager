@@ -22,31 +22,31 @@ class WebHelper {
   final Map<String, Future<FileInfo>> _memCache;
 
   ///Download the file from the url
-  Future<FileInfo> downloadFile(String url,
+  Future<FileInfo> downloadFile(String url, String cacheKey,
       {Map<String, String> authHeaders, bool ignoreMemCache = false}) async {
-    if (!_memCache.containsKey(url) || ignoreMemCache) {
+    if (!_memCache.containsKey(cacheKey) || ignoreMemCache) {
       var completer = Completer<FileInfo>();
       unawaited(() async {
         try {
           final cacheObject =
-              await _downloadRemoteFile(url, authHeaders: authHeaders);
+              await _downloadRemoteFile(url, cacheKey, authHeaders: authHeaders);
           completer.complete(cacheObject);
         } catch (e, stackTrace) {
           completer.completeError(e);
         } finally {
-          unawaited(_memCache.remove(url));
+          unawaited(_memCache.remove(cacheKey));
         }
       }());
-      _memCache[url] = completer.future;
+      _memCache[cacheKey] = completer.future;
     }
-    return _memCache[url];
+    return _memCache[cacheKey];
   }
 
   ///Download the file from the url
-  Future<FileInfo> _downloadRemoteFile(String url,
+  Future<FileInfo> _downloadRemoteFile(String url, String cacheKey,
       {Map<String, String> authHeaders}) async {
-    var cacheObject = await _store.retrieveCacheData(url);
-    cacheObject ??= CacheObject(url);
+    var cacheObject = await _store.retrieveCacheData(cacheKey);
+    cacheObject ??= CacheObject(url, cacheKey);
 
     final headers = <String, String>{};
     if (authHeaders != null) {

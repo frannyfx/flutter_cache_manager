@@ -85,32 +85,32 @@ abstract class BaseCacheManager {
   /// When a file is cached it is return directly, when it is too old the file is
   /// downloaded in the background. When a cached file is not available the
   /// newly downloaded file is returned.
-  Future<File> getSingleFile(String url, {Map<String, String> headers}) async {
-    final cacheFile = await getFileFromCache(url);
+  Future<File> getSingleFile(String url, String cacheKey, {Map<String, String> headers}) async {
+    final cacheFile = await getFileFromCache(cacheKey);
     if (cacheFile != null) {
       if (cacheFile.validTill.isBefore(DateTime.now())) {
-        unawaited(_webHelper.downloadFile(url, authHeaders: headers));
+        unawaited(_webHelper.downloadFile(url, cacheKey, authHeaders: headers));
       }
       return cacheFile.file;
     }
-    return (await _webHelper.downloadFile(url, authHeaders: headers)).file;
+    return (await _webHelper.downloadFile(url, cacheKey, authHeaders: headers)).file;
   }
 
   /// Get the file from the cache and/or online, depending on availability and age.
   /// Downloaded form [url], [headers] can be used for example for authentication.
   /// The files are returned as stream. First the cached file if available, when the
   /// cached file is too old the newly downloaded file is returned afterwards.
-  Stream<FileInfo> getFile(String url, {Map<String, String> headers}) {
+  Stream<FileInfo> getFile(String url, String cacheKey, {Map<String, String> headers}) {
     final streamController = StreamController<FileInfo>();
-    _pushFileToStream(streamController, url, headers);
+    _pushFileToStream(streamController, url, cacheKey, headers);
     return streamController.stream;
   }
 
-  Future<void> _pushFileToStream(StreamController streamController, String url,
+  Future<void> _pushFileToStream(StreamController streamController, String url, String cacheKey,
       Map<String, String> headers) async {
     FileInfo cacheFile;
     try {
-      cacheFile = await getFileFromCache(url);
+      cacheFile = await getFileFromCache(cacheKey);
       if (cacheFile != null) {
         streamController.add(cacheFile);
       }
@@ -121,7 +121,7 @@ abstract class BaseCacheManager {
     if (cacheFile == null || cacheFile.validTill.isBefore(DateTime.now())) {
       try {
         final webFile =
-            await _webHelper.downloadFile(url, authHeaders: headers);
+            await _webHelper.downloadFile(url, cacheKey, authHeaders: headers);
         if (webFile != null) {
           streamController.add(webFile);
         }
@@ -140,17 +140,17 @@ abstract class BaseCacheManager {
   }
 
   ///Download the file and add to cache
-  Future<FileInfo> downloadFile(String url,
+  Future<FileInfo> downloadFile(String url, String cacheKey,
       {Map<String, String> authHeaders, bool force = false}) {
-    return _webHelper.downloadFile(url,
+    return _webHelper.downloadFile(url, cacheKey,
         authHeaders: authHeaders, ignoreMemCache: force);
   }
 
   ///Get the file from the cache
-  Future<FileInfo> getFileFromCache(String url) => _store.getFile(url);
+  Future<FileInfo> getFileFromCache(String cacheKey) => _store.getFile(cacheKey);
 
   ///Returns the file from memory if it has already been fetched
-  FileInfo getFileFromMemory(String url) => _store.getFileFromMemory(url);
+  FileInfo getFileFromMemory(String cacheKey) => _store.getFileFromMemory(cacheKey);
 
   /// Put a file in the cache. It is recommended to specify the [eTag] and the
   /// [maxAge]. When [maxAge] is passed and the eTag is not set the file will
@@ -160,14 +160,15 @@ abstract class BaseCacheManager {
   /// The returned [File] is saved on disk.
   Future<File> putFile(
     String url,
+    String cacheKey,
     Uint8List fileBytes, {
     String eTag,
     Duration maxAge = const Duration(days: 30),
     String fileExtension = 'file',
   }) async {
-    var cacheObject = await _store.retrieveCacheData(url);
+    var cacheObject = await _store.retrieveCacheData(cacheKey);
     cacheObject ??=
-        CacheObject(url, relativePath: '${Uuid().v1()}.$fileExtension');
+        CacheObject(url, cacheKey, relativePath: '${Uuid().v1()}.$fileExtension');
     cacheObject.validTill = DateTime.now().add(maxAge);
     cacheObject.eTag = eTag;
 
@@ -182,8 +183,8 @@ abstract class BaseCacheManager {
   }
 
   /// Remove a file from the cache
-  Future<void> removeFile(String url) async {
-    final cacheObject = await _store.retrieveCacheData(url);
+  Future<void> removeFile(String cacheKey) async {
+    final cacheObject = await _store.retrieveCacheData(cacheKey);
     if (cacheObject != null) {
       await _store.removeCachedFile(cacheObject);
     }

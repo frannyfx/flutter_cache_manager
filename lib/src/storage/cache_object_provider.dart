@@ -16,6 +16,7 @@ class CacheObjectProvider implements CacheInfoRepository {
       await db.execute('''
       create table $_tableCacheObject ( 
         ${CacheObject.columnId} integer primary key, 
+        ${CacheObject.columnCacheKey} text,
         ${CacheObject.columnUrl} text, 
         ${CacheObject.columnPath} text,
         ${CacheObject.columnETag} text,
@@ -39,8 +40,8 @@ class CacheObjectProvider implements CacheInfoRepository {
     return cacheObject;
   }
 
-  Future<CacheObject> get(String url) async {
-    List<Map> maps = await db.query(_tableCacheObject, columns: null, where: '${CacheObject.columnUrl} = ?', whereArgs: [url]);
+  Future<CacheObject> get(String cacheKey) async {
+    List<Map> maps = await db.query(_tableCacheObject, columns: null, where: '${CacheObject.columnCacheKey} = ?', whereArgs: [cacheKey]);
     if (maps.isNotEmpty) {
       return CacheObject.fromMap(maps.first.cast<String, dynamic>());
     }
