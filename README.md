@@ -6,6 +6,15 @@ It uses the cache-control http header to efficiently retrieve files.
 
 The more basic usage is explained here. See the complete docs for more info.
 
+## How to install
+Add the following to your *pubspec.yaml* file under `dependencies`:
+```
+flutter_cache_manager:
+    git:
+      url: git://github.com/frannyfx/flutter_cache_manager.git
+      ref: develop
+```
+
 ## Usage
 
 The cache manager can be used to get a file on various ways
